@@ -7,6 +7,7 @@ package edu.eci.arsw.services;
 
 import edu.eci.arsw.model.Blueprint;
 import edu.eci.arsw.persistence.BlueprintNotFoundException;
+import edu.eci.arsw.persistence.BlueprintPersistenceException;
 import edu.eci.arsw.persistence.BlueprintsPersistence;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -24,12 +25,12 @@ public class BlueprintsServices {
     @Autowired
     BlueprintsPersistence bpp=null;
     
-    public void addNewBlueprint(Blueprint bp){
-        
+    public void addNewBlueprint(Blueprint bp) throws BlueprintPersistenceException {
+        bpp.saveBlueprint(bp);
     }
     
-    public Set<Blueprint> getAllBlueprints(){
-        return null;
+    public Set<Blueprint> getAllBlueprints() throws BlueprintNotFoundException {
+        return bpp.getAllBlueprints();
     }
     
     /**
@@ -67,4 +68,7 @@ public class BlueprintsServices {
         return blueprintsByAuthor;
     }
     
+    public void updateBlueprint(String author, String name, Blueprint updatedBlueprint) throws BlueprintNotFoundException, BlueprintPersistenceException {
+        bpp.updateBlueprint(author, name, updatedBlueprint);
+    }
 }

@@ -2,11 +2,89 @@
 
 ### Arquitecturas de Software
 
-
-
 #### API REST para la gestión de planos.
 
 En este ejercicio se va a construír el componente BlueprintsRESTAPI, el cual permita gestionar los planos arquitectónicos de una prestigiosa compañia de diseño. La idea de este API es ofrecer un medio estandarizado e 'independiente de la plataforma' para que las herramientas que se desarrollen a futuro para la compañía puedan gestionar los planos de forma centralizada.
+
+
+### Resumen de Funcionalidades Implementadas
+
+Este proyecto ha sido completamente implementado con todas las funcionalidades solicitadas:
+
+#### Parte I - API REST Básico
+- **Inyección de dependencias**: Configurado correctamente con anotaciones @Service y @Autowired
+- **Datos de prueba**: InMemoryBlueprintPersistence inicializado con 6 blueprints, incluyendo múltiples blueprints para los mismos autores (andres y maria)
+- **Endpoints GET implementados**:
+  - `GET /blueprints` - Retorna todos los blueprints en formato JSON
+  - `GET /blueprints/{author}` - Retorna blueprints de un autor específico
+  - `GET /blueprints/{author}/{bpname}` - Retorna un blueprint específico
+
+####  Parte II - Operaciones POST y PUT
+- **POST /blueprints** - Permite crear nuevos blueprints
+- **PUT /blueprints/{author}/{bpname}** - Permite actualizar blueprints existentes
+- **Códigos HTTP correctos**: 201 (CREATED), 202 (ACCEPTED), 404 (NOT_FOUND), 403 (FORBIDDEN)
+
+#### Parte III - Manejo de Concurrencia
+- **Thread-Safety**: Implementado usando ConcurrentHashMap en lugar de HashMap
+- **Operaciones atómicas**: Uso de `putIfAbsent()` y `replace()` para evitar condiciones de carrera
+- **Análisis completo**: Documentado en ANALISIS_CONCURRENCIA.txt
+
+### Endpoints Disponibles
+
+| Método | Endpoint | Descripción | Respuesta |
+|--------|----------|-------------|-----------|
+| GET | `/blueprints` | Obtiene todos los blueprints | 202 + JSON array |
+| GET | `/blueprints/{author}` | Obtiene blueprints de un autor | 202 + JSON array / 404 |
+| GET | `/blueprints/{author}/{bpname}` | Obtiene blueprint específico | 202 + JSON object / 404 |
+| POST | `/blueprints` | Crea nuevo blueprint | 201 / 403 |
+| PUT | `/blueprints/{author}/{bpname}` | Actualiza blueprint | 202 / 404 / 403 |
+
+### Datos de Prueba Disponibles
+
+```json
+Autores y sus blueprints:
+- luis: house
+- andres: pool, garden
+- julian: backyard
+- maria: kitchen, livingroom
+```
+
+### Comandos de Ejecución
+
+```bash
+# Compilar
+mvn clean compile
+
+# Ejecutar aplicación
+mvn spring-boot:run
+
+# Probar endpoints (ejemplos)
+curl http://localhost:8080/blueprints
+curl http://localhost:8080/blueprints/andres
+curl http://localhost:8080/blueprints/andres/pool
+
+# Crear nuevo blueprint
+curl -i -X POST -H "Content-Type:application/json" -H "Accept:application/json" \
+http://localhost:8080/blueprints \
+-d '{"author":"test","name":"testBlueprint","points":[{"x":10,"y":10},{"x":20,"y":20}]}'
+
+# Actualizar blueprint
+curl -i -X PUT -H "Content-Type:application/json" -H "Accept:application/json" \
+http://localhost:8080/blueprints/andres/pool \
+-d '{"points":[{"x":100,"y":100},{"x":200,"y":200}]}'
+```
+
+### Aspectos de Concurrencia Implementados
+
+- **ConcurrentHashMap**: Estructura thread-safe para almacenamiento
+- **putIfAbsent()**: Operación atómica para inserción condicional
+- **replace()**: Operación atómica para actualización
+- **Análisis detallado**: Ver archivo ANALISIS_CONCURRENCIA.txt
+
+---
+
+## ENUNCIADO ORIGINAL DEL LABORATORIO
+
 El siguiente, es el diagrama de componentes que corresponde a las decisiones arquitectónicas planteadas al inicio del proyecto:
 
 ![](img/CompDiag.png)

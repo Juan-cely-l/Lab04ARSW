@@ -1,0 +1,89 @@
+ANÁLISIS DE CONCURRENCIA - LAB04ARSW
+==========================================
+
+## CONDICIONES DE CARRERA IDENTIFICADAS:
+
+1. **Operación de agregación de blueprints no atómica:**
+   - El método saveBlueprint() en la implementación original realizaba dos operaciones separadas:
+     a) Verificar si ya existe un blueprint con la misma clave
+     b) Agregar el blueprint si no existe
+   - Entre estas dos operaciones, otro hilo podría insertar un blueprint con la misma clave,
+     causando que se sobrescriba un blueprint existente sin lanzar la excepción correspondiente.
+
+2. **Uso de estructuras de datos no thread-safe:**
+   - La implementación original podría haber usado HashMap en lugar de ConcurrentHashMap.
+   - HashMap no es thread-safe y puede causar inconsistencias en entornos concurrentes.
+
+3. **Operaciones de lectura inconsistentes:**
+   - Al iterar sobre el mapa para buscar blueprints por autor, la colección podría cambiar
+     durante la iteración si se usa una estructura no thread-safe.
+
+## REGIONES CRÍTICAS:
+
+1. **Método saveBlueprint():**
+   - La verificación de existencia y posterior inserción del blueprint.
+
+2. **Método updateBlueprint():**
+   - La verificación de existencia y posterior actualización del blueprint.
+
+3. **Iteración sobre blueprints:**
+   - En getBlueprintByAuthor() al iterar sobre todas las entradas del mapa.
+
+## SOLUCIONES IMPLEMENTADAS:
+
+1. **Uso de ConcurrentHashMap:**
+   - Reemplazamos HashMap con ConcurrentHashMap que es thread-safe.
+   - Todas las operaciones básicas (get, put, remove) son atómicas.
+
+2. **Operaciones atómicas condicionales:**
+   - Utilizamos putIfAbsent() en lugar de verificar y luego insertar.
+   - putIfAbsent() es una operación atómica que solo inserta si la clave no existe.
+   - Esto elimina la condición de carrera en la inserción.
+
+3. **Operación replace() para actualizaciones:**
+   - Utilizamos replace() para actualizaciones, que es atómica.
+   - Solo actualiza si la clave existe, manteniendo la consistencia.
+
+4. **Iteración segura:**
+   - ConcurrentHashMap permite iteración segura incluso si el mapa se modifica
+     durante la iteración (fail-safe iterator).
+
+## JUSTIFICACIÓN DE LA SOLUCIÓN:
+
+La solución implementada evita el uso de synchronized blocks que degradarían
+significativamente el rendimiento del API. En su lugar:
+
+- ConcurrentHashMap permite múltiples lectores concurrentes sin bloqueo.
+- Las operaciones de escritura solo bloquean el segmento específico afectado.
+- Los métodos atómicos (putIfAbsent, replace) garantizan consistencia sin
+  sincronización explícita.
+
+Esta aproximación mantiene alto rendimiento mientras garantiza thread-safety.
+
+## CÓDIGO CLAVE IMPLEMENTADO:
+
+```java
+// Thread-safe map
+private final Map<Tuple<String,String>,Blueprint> blueprints = new ConcurrentHashMap<>();
+
+// Operación atómica para inserción
+public void saveBlueprint(Blueprint bp) throws BlueprintPersistenceException {
+    Tuple<String, String> key = new Tuple<>(bp.getAuthor(), bp.getName());
+    if (blueprints.putIfAbsent(key, bp) != null) {
+        throw new BlueprintPersistenceException("The given blueprint already exists: "+bp);
+    }
+}
+
+// Operación atómica para actualización
+public void updateBlueprint(String author, String bprintname, Blueprint updatedBlueprint)
+    throws BlueprintNotFoundException, BlueprintPersistenceException {
+    Tuple<String, String> key = new Tuple<>(author, bprintname);
+    if (blueprints.get(key) == null) {
+        throw new BlueprintNotFoundException("The blueprint " + author + ":" + bprintname + " does not exist");
+    }
+    blueprints.replace(key, updatedBlueprint);
+}
+```
+
+Esta solución garantiza que el API REST funcione correctamente en un entorno
+concurrente con múltiples hilos atendiendo peticiones simultáneamente.
